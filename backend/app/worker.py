@@ -10,7 +10,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.config import settings
-from app.db import SessionLocal
+from app.db import SessionLocal, init_db
 from app.models import BlacklistDomain, Email, Job, Site
 from app.queue import _redis_settings_from_url
 from app.scraper.crawler import CrawlConfig, crawl_site
@@ -167,6 +167,10 @@ async def scrape_job(ctx: dict, job_id: int) -> None:
 
 
 async def startup(ctx: dict) -> None:
+    # Make sure tables exist before we touch them (handles worker
+    # starting before or alongside the backend on first boot).
+    await init_db()
+
     http = HttpFetcher(settings.default_user_agent, timeout=settings.default_timeout_seconds)
     await http.start()
     ctx["http"] = http
